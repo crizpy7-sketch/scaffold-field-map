@@ -1,0 +1,1102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#11181C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Scaffold Map">
+<title>Scaffold Field Map · GCS</title>
+<style>
+  :root{
+    --paper:#F2F4F3; --ink:#11181C; --ink2:#1B2429; --steel:#C4CDD2; --steel-soft:#E3E8EA;
+    --apron:#DDE4E7; --built:#15A150; --built-deep:#0E7C3C; --srl:#F26419;
+    --down:#8A99A3; --down-deep:#5E6A70; --rib:#11181C; --panel:#FFFFFF;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --ui:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%}
+  body{font-family:var(--ui);color:var(--ink);background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+
+  header{background:linear-gradient(180deg,#141C21,#0B0F12);color:#fff;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;flex:0 0 auto;box-shadow:0 8px 20px -8px rgba(0,0,0,.55),0 1px 0 rgba(0,0,0,.4);position:relative;z-index:6}
+  .appbar{display:flex;align-items:center;gap:11px}
+  .badge{flex:0 0 auto;width:38px;height:38px;border-radius:9px;background:var(--srl);color:#11181C;font-family:var(--mono);font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;letter-spacing:.5px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+  .brand-txt{flex:1;min-width:0}
+  .title{font-weight:700;font-size:15px;letter-spacing:.2px;line-height:1.1}
+  .project{margin-top:2px;width:100%;background:transparent;border:0;border-bottom:1px dashed #39444A;color:#AFC0C8;font-family:var(--mono);font-size:11px;padding:1px 0;letter-spacing:.3px}
+  .project::placeholder{color:#5A6A72}
+  .project:focus{outline:none;border-bottom-color:var(--srl);color:#fff}
+  .status{flex:0 0 auto;font-family:var(--mono);font-size:10px;color:#9AA7AE;text-align:right;line-height:1.3;max-width:96px}
+  .status .live{color:var(--built)} .status .local{color:var(--srl)}
+  .stats{display:flex;gap:10px;margin-top:10px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .stat{flex:0 0 auto;line-height:1.05;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:6px 11px}
+  .stat b{font-family:var(--mono);font-size:18px;font-weight:600;display:block}
+  .stat span{font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:#9AA7AE}
+  .stat.built b{color:var(--built)} .stat.srl b{color:var(--srl)}
+
+  .levels{display:flex;gap:6px;padding:8px 10px;background:#0B1013;flex:0 0 auto}
+  .levels button{flex:1;border:1px solid #2A343A;background:#11181C;color:#9AA7AE;border-radius:9px;padding:8px 4px;min-height:46px;font-family:var(--ui);font-weight:700;font-size:13px;line-height:1.1}
+  .levels button .ct{display:block;font-family:var(--mono);font-size:10px;font-weight:600;color:#5A6A72;margin-top:2px}
+  .levels button[aria-pressed="true"]{background:#fff;color:var(--ink);border-color:#fff}
+  .levels button[aria-pressed="true"] .ct{color:var(--built-deep)}
+
+  .controls{display:flex;gap:10px;padding:9px 14px;background:var(--panel);border-bottom:1px solid var(--steel-soft);flex:0 0 auto;align-items:center;justify-content:space-between}
+  .seg{display:flex;border:1px solid var(--steel);border-radius:8px;overflow:hidden;flex:0 0 auto}
+  .seg button{font-size:12px;font-weight:600;border:0;padding:7px 11px;background:#fff;color:var(--ink);min-height:36px}
+  .seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+  .jump{display:flex;align-items:center;gap:5px;font-size:12px;color:#5A6A72;flex:0 0 auto}
+  .jump input{width:62px;font-family:var(--mono);font-size:16px;font-weight:700;padding:7px 6px;border:1px solid var(--steel);border-radius:8px;text-align:center;text-transform:uppercase}
+  .spacer{flex:1 0 4px}
+  .btn{font-size:12px;font-weight:600;border:1px solid var(--steel);background:#fff;border-radius:8px;padding:7px 10px;min-height:36px;color:var(--ink);flex:0 0 auto;white-space:nowrap}
+  .btn.accent{border-color:var(--ink);background:var(--ink);color:#fff}
+
+  #scroll{flex:1 1 auto;overflow:auto;-webkit-overflow-scrolling:touch;position:relative}
+  #grid{display:grid;width:max-content;background:var(--steel-soft);gap:1px;padding:1px}
+  .cell{background:var(--paper);display:flex;align-items:center;justify-content:center;position:relative;font-family:var(--mono);user-select:none}
+  .corner{position:sticky;top:0;left:0;z-index:6;background:var(--ink);color:#fff}
+  .colhead{position:sticky;top:0;z-index:5;background:var(--ink2);color:#8FA0A8;flex-direction:column;line-height:1;font-size:9px}
+  .colhead.line{background:var(--ink);color:#fff}
+  .colhead.buffer{background:#10171B;color:#5E6A70}
+  .colhead .num{font-size:12px;font-weight:700}
+  .colhead .ft{font-size:8px;color:#8FA0A8;margin-top:1px}
+  .rowhead{position:sticky;left:0;z-index:4;background:var(--ink2);color:#8FA0A8;flex-direction:column;line-height:1;font-size:9px}
+  .rowhead.line{background:var(--ink);color:#fff}
+  .rowhead.buffer{background:#10171B;color:#5E6A70}
+  .rowhead .num{font-size:13px;font-weight:700}
+  .rowhead .ft{font-size:8px;color:#8FA0A8;margin-top:1px}
+
+  .bay{cursor:pointer}
+  .bay.buffer{background-color:#C7D2D8;background-image:repeating-linear-gradient(45deg,rgba(94,106,112,.22) 0 1.5px,transparent 1.5px 7px)}
+  .bay.vrib{border-left:2px solid var(--rib)}
+  .bay.hrib{border-top:2px solid var(--rib)}
+  .bay.bldg-w{border-left:4px solid var(--ink)}
+  .bay.bldg-e{border-right:4px solid var(--ink)}
+  .bay.bldg-n{border-top:4px solid var(--ink)}
+  .bay.bldg-s{border-bottom:4px solid var(--ink)}
+  .bay.built{background:var(--built)}
+  .bay.down{background:var(--down)}
+  .bay.hit{box-shadow:inset 0 0 0 3px var(--srl)!important;z-index:3}
+  .bay.draft{background:var(--srl)!important;box-shadow:inset 0 0 0 2px #fff!important;z-index:2}
+  .bay.lockcell{box-shadow:inset 0 0 0 3px #11181C!important;z-index:2}
+  .bay .srlbadge{position:absolute;top:1px;right:1px;background:var(--srl);color:#fff;font-size:8px;font-weight:700;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 2px;line-height:1;z-index:1}
+  .bay .pho{position:absolute;bottom:1px;left:1px;width:6px;height:6px;border-radius:1px;background:#fff;border:1px solid var(--ink);z-index:1}
+  .bay:focus-visible{outline:3px solid var(--srl);outline-offset:-3px;z-index:2}
+  body.painting .bay{cursor:crosshair}
+
+  body[data-view="detail"] #grid{grid-template-columns:42px repeat(489,44px);grid-auto-rows:44px}
+  body[data-view="detail"] .corner,body[data-view="detail"] .colhead{height:44px}
+  body[data-view="field"] #grid{grid-template-columns:16px repeat(489,9px);grid-auto-rows:9px;gap:1px}
+  body[data-view="field"] .colhead .ft,body[data-view="field"] .colhead .num,
+  body[data-view="field"] .rowhead .ft,body[data-view="field"] .rowhead .num{font-size:0}
+  body[data-view="field"] .colhead.line,body[data-view="field"] .rowhead.line{background:var(--srl)}
+  body[data-view="field"] .bay .srlbadge{width:5px;height:5px;min-width:0;border-radius:3px;font-size:0;padding:0;top:0;right:0}
+  body[data-view="field"] .bay .pho{display:none}
+  body[data-view="field"] .bay.vrib,body[data-view="field"] .bay.hrib{border-width:1px}
+  body[data-view="field"] .bay.bldg-w,body[data-view="field"] .bay.bldg-e,
+  body[data-view="field"] .bay.bldg-n,body[data-view="field"] .bay.bldg-s{border-width:1.5px}
+  body[data-view="field"] .corner,body[data-view="field"] .colhead{height:16px}
+
+  .scrim{position:fixed;inset:0;background:rgba(17,24,28,.5);display:none;z-index:20}
+  .scrim.open{display:block}
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--panel);border-radius:16px 16px 0 0;padding:14px 16px calc(16px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .22s ease;max-height:88vh;overflow:auto;box-shadow:0 -8px 30px rgba(0,0,0,.25)}
+  .sheet.open{transform:translateY(0)}
+  .grab{width:38px;height:4px;border-radius:2px;background:var(--steel);margin:0 auto 12px}
+  .sheet h2{margin:0;font-size:17px}
+  .sheet .station{font-family:var(--mono);font-size:12px;color:var(--srl);margin:2px 0 14px;font-weight:600;line-height:1.5}
+  .footnote{font-family:var(--mono);font-size:11px;color:#5A6A72;margin-top:6px}
+  label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#5A6A72;margin:12px 0 5px;font-weight:600}
+  input[type=text],input[type=date],input[type=number],textarea{width:100%;font-family:var(--ui);font-size:16px;padding:11px 12px;border:1px solid var(--steel);border-radius:9px;background:#fff;color:var(--ink)}
+  textarea{min-height:66px;resize:vertical;line-height:1.4}
+  .status-seg{display:flex;gap:6px;margin-top:2px}
+  .status-seg button{flex:1;border:1px solid var(--steel);background:#fff;border-radius:9px;padding:10px;font-weight:600;font-size:13px;min-height:44px;color:var(--ink)}
+  .status-seg button.on[data-s="built"]{background:var(--built);border-color:var(--built);color:#fff}
+  .status-seg button.on[data-s="down"]{background:var(--down);border-color:var(--down);color:#fff}
+  .status-seg button.on[data-s="empty"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .dims{display:flex;gap:6px}.dims input{text-align:center;font-family:var(--mono)}
+  .shapebtn{margin-top:8px;border:1px solid var(--steel);color:var(--ink);background:#fff;border-radius:9px;padding:10px;font-weight:600;font-size:13px;width:100%}
+  .shapebox{margin-top:8px;background:#FFF6F0;border:1px solid #F7CBB0;border-radius:9px;padding:10px 12px}
+  .shapebox .si{font-family:var(--mono);font-size:12px;color:var(--built-deep);font-weight:600}
+  .srl-row{display:flex;gap:6px;margin-top:6px}.srl-row input{flex:1}
+  .srl-row button{border:1px solid var(--steel);background:#fff;border-radius:9px;width:44px;font-size:18px;color:var(--down)}
+  .addsrl{margin-top:8px;border:1px dashed var(--srl);color:var(--srl);background:#fff;border-radius:9px;padding:9px;font-weight:600;font-size:13px;width:100%}
+  .photo-wrap{display:flex;gap:10px;align-items:center;margin-top:6px}
+  .photo-wrap label.shoot{margin:0;border:1px dashed var(--steel);border-radius:9px;padding:14px;flex:1;text-align:center;color:#5A6A72;font-size:13px;text-transform:none;letter-spacing:0}
+  .photo-wrap img{width:64px;height:64px;object-fit:cover;border-radius:9px;border:1px solid var(--steel)}
+  .photo-wrap input[type=file]{display:none}
+  .sheet-actions{display:flex;gap:8px;margin-top:18px}
+  .sheet-actions .btn{flex:1;justify-content:center;min-height:48px;font-size:15px;display:flex;align-items:center}
+  .save{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .search-panel{position:fixed;left:0;right:0;top:0;z-index:22;background:var(--panel);transform:translateY(-100%);transition:transform .2s ease;box-shadow:0 8px 30px rgba(0,0,0,.25);padding:12px 14px calc(12px + env(safe-area-inset-top));max-height:80vh;display:flex;flex-direction:column}
+  .search-panel.open{transform:translateY(0)}
+  .search-top{display:flex;gap:8px;align-items:center}
+  .search-top input{flex:1;font-size:16px;padding:12px 13px;border:1px solid var(--steel);border-radius:10px}
+  .search-top button{border:0;background:none;font-size:15px;font-weight:600;color:var(--srl);padding:8px}
+  #search-results{margin-top:10px;overflow:auto}
+  .res{display:flex;gap:10px;align-items:center;padding:10px 8px;border-bottom:1px solid var(--steel-soft);cursor:pointer}
+  .res .pin{width:10px;height:10px;border-radius:2px;flex:0 0 auto}
+  .res .main{flex:1;min-width:0}
+  .res .l1{font-size:14px;font-weight:600}
+  .res .l2{font-family:var(--mono);font-size:11px;color:#5A6A72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .res .lvl{font-family:var(--mono);font-size:10px;color:#fff;background:var(--ink);border-radius:5px;padding:2px 6px;flex:0 0 auto}
+  .res-empty{padding:24px 8px;color:#8A99A3;text-align:center;font-size:13px}
+
+  .menu{position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:22;background:#fff;border:1px solid var(--steel);border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.28);overflow:hidden;display:none}
+  .menu.open{display:block}
+  .menu button{display:flex;gap:10px;align-items:center;width:100%;border:0;background:#fff;padding:13px 14px;font-size:14px;font-weight:600;color:var(--ink);text-align:left;border-bottom:1px solid var(--steel-soft)}
+  .menu button:last-child{border-bottom:0}
+
+  .paintbar{position:fixed;left:10px;right:10px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:23;background:#11181C;color:#fff;border-radius:18px;padding:11px 12px;display:none;flex-direction:column;gap:9px;box-shadow:0 16px 44px rgba(0,0,0,.46)}
+  .paintbar.open{display:flex}
+  .pb-row1{display:flex;align-items:center;gap:10px}
+  .paintbar .pb-info{flex:1;font-size:13px;line-height:1.2}
+  .paintbar .pb-info b{font-family:var(--mono);color:var(--srl);font-size:18px}
+  .paintbar .pb-hint{font-size:10.5px;color:#9AA7AE;margin-top:1px}
+  .pb-tool{display:flex;background:#0A0F12;border-radius:11px;padding:3px;gap:3px}
+  .pb-tool button{border:0;background:transparent;color:#9AA7AE;border-radius:8px;padding:8px 12px;font-weight:700;font-size:13px;min-height:40px}
+  .pb-tool button.on{background:#fff;color:#11181C}
+  .pb-row2{display:flex;gap:8px}
+  .pb-row2 button{flex:1;border:1px solid #2A343A;background:#1B2429;color:#fff;border-radius:12px;padding:12px;font-weight:700;font-size:14px;min-height:48px}
+  .pb-row2 #pb-save{background:var(--srl);border-color:var(--srl);color:#11181C}
+
+  .legend{display:flex;gap:13px;padding:6px 12px;background:var(--panel);border-top:1px solid var(--steel-soft);flex:0 0 auto;font-size:11px;align-items:center;color:#5A6A72;overflow-x:auto;white-space:nowrap}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+
+  #print-area{display:none}
+  @media print{ body>*{display:none!important} #print-area{display:block!important} @page{margin:12mm} }
+  .print-doc{font-family:var(--ui);color:#11181C;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .print-head{display:flex;align-items:center;gap:12px;border-bottom:3px solid #11181C;padding-bottom:10px;margin-bottom:12px}
+  .print-head .pbadge{width:46px;height:46px;border-radius:8px;background:#F26419;color:#11181C;font-family:var(--mono);font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .print-head h1{margin:0;font-size:20px}
+  .print-head .meta{font-family:var(--mono);font-size:12px;color:#5A6A72;margin-top:2px}
+  .print-head .right{margin-left:auto;text-align:right;font-family:var(--mono);font-size:11px;color:#5A6A72}
+  .psum{display:flex;gap:22px;margin:0 0 14px}
+  .psum div b{font-family:var(--mono);font-size:22px;display:block}
+  .psum div span{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:#5A6A72}
+  .print-doc h3{font-size:14px;margin:18px 0 6px;border-bottom:1px solid #C4CDD2;padding-bottom:4px}
+  .print-doc h3 .lvlsum{font-family:var(--mono);font-weight:500;font-size:11px;color:#5A6A72;float:right}
+  table.rep{width:100%;border-collapse:collapse;font-size:11px}
+  table.rep th{text-align:left;background:#11181C;color:#fff;padding:6px 7px;font-size:9px;text-transform:uppercase;letter-spacing:.5px}
+  table.rep td{padding:5px 7px;border-bottom:1px solid #E3E8EA;vertical-align:top}
+  table.rep tr.down td{color:#8A99A3}
+  table.rep td.r{text-align:right;font-family:var(--mono)} table.rep td.c{text-align:center}
+  table.rep td.srl{font-family:var(--mono);font-size:10px;color:#F26419}
+  table.rep tr.rental td{background:#FDEDE3} table.rep tr.rental td:nth-child(3){color:#C0410A;font-weight:800}
+  .cflag{color:#C0410A;font-weight:800;font-size:9px}
+  .pmap{width:100%;height:auto;border:1px solid #C4CDD2;margin-top:4px}
+  .mappage{page-break-after:always;break-after:page}
+  .mappage:last-child{page-break-after:auto;break-after:auto}
+  .mappage .pmap{max-height:6.5in}
+  .mphead{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid #11181C;padding-bottom:5px;margin:0 0 4px}
+  .mphead b{font-size:15px}
+  .mphead .mpcols{font-family:var(--mono);font-size:14px;font-weight:700;color:#0E7C3C}
+  .mphead .mpmeta{margin-left:auto;font-family:var(--mono);font-size:10px;color:#5A6A72}
+  .plegend{display:flex;gap:16px;font-size:11px;color:#5A6A72;margin-top:8px;flex-wrap:wrap}
+  .plegend i{width:11px;height:11px;display:inline-block;border-radius:2px;margin-right:5px;vertical-align:-1px}
+  .pfoot{margin-top:16px;font-family:var(--mono);font-size:10px;color:#8A99A3;border-top:1px solid #E3E8EA;padding-top:8px}
+  /* ---------- iOS polish ---------- */
+  button{transition:transform .07s ease}
+  .btn:active,.levels button:active,.seg button:active,.status-seg button:active,
+  .menu button:active,.pb-row2 button:active,.pb-tool button:active,.shapebtn:active,
+  .addsrl:active,.sheet-actions .btn:active,.search-top button:active{transform:scale(.97)}
+  .title{font-size:16px;font-weight:800;letter-spacing:.2px}
+  .stat b{font-size:21px;font-weight:800}
+  .btn{font-weight:700;border-radius:11px}
+  .seg{border-radius:11px}
+  .status-seg button{border-radius:11px;font-weight:700}
+  .levels button{font-weight:700}
+  .sheet{border-radius:24px 24px 0 0}
+  .sheet h2{font-size:19px;font-weight:800;letter-spacing:.2px}
+  label{font-weight:700}
+  .save{font-weight:800;letter-spacing:.3px}
+  body.tool-paint #grid{touch-action:none}
+  body.painting{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  /* ---------- v9 visuals ---------- */
+  header{position:relative}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;
+    background:repeating-linear-gradient(45deg,var(--srl) 0 11px,#11181C 11px 22px);opacity:.92}
+  .stat{border-left:3px solid rgba(255,255,255,.16)}
+  .stat.built{border-left-color:var(--built)} .stat.srl{border-left-color:var(--srl)}
+  .stat.leg{border-left-color:#39B3C7} .stat.leg b{color:#6FD6E8}
+  .levels button[aria-pressed="true"]{box-shadow:inset 0 -3px 0 var(--srl)}
+  /* building columns drawn at every 40 ft intersection */
+  .bay.colnode::before{content:"";position:absolute;left:0;top:0;width:58%;height:58%;
+    transform:translate(-50%,-50%);background:#11181C;border-radius:2px;z-index:1;pointer-events:none;
+    box-shadow:0 1px 2px rgba(0,0,0,.45),inset 0 0 0 1.5px #3A464C}
+  .bay.colnode::after{content:attr(data-grid);position:absolute;left:50%;bottom:1px;transform:translateX(-50%);
+    font:800 8px var(--mono);color:#11181C;z-index:2;pointer-events:none;white-space:nowrap;letter-spacing:.3px;text-shadow:0 0 2px #fff,0 0 2px #fff}
+  body[data-view="field"] .bay.colnode::after{display:none}
+  body[data-view="field"] .bay.colnode::before{width:46%;height:46%}
+  /* live leg / area calc chips */
+  .calc{display:flex;gap:8px;margin:12px 0 2px}
+  .calc>div{flex:1;background:#0E1417;color:#fff;border-radius:12px;padding:9px 6px;text-align:center;border:1px solid #1E272C}
+  .calc b{display:block;font-family:var(--mono);font-size:18px;font-weight:800;color:var(--srl);line-height:1.1}
+  .calc>div:first-child b{color:#fff}
+  .calc span{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:#9AA7AE}
+  /* ---------- v10 premium mobile ---------- */
+  .title{font-size:16.5px;font-weight:800;letter-spacing:.3px}
+  .badge{border-radius:11px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18),0 2px 8px rgba(242,100,25,.4)}
+  .status{font-size:9.5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);border-radius:9px;padding:5px 9px;max-width:none}
+  .stats{gap:8px;margin-top:11px}
+  .stat{border-radius:11px;padding:7px 12px;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.09)}
+  .stat b{font-size:19px}
+  .levels{padding:9px 12px;gap:7px}
+  .levels button{border-radius:12px;min-height:48px}
+  .seg{border-radius:11px;border-color:var(--steel)}
+  .seg button{font-size:13px;font-weight:700;padding:9px 15px;min-height:38px}
+  .jump{font-weight:700;color:#5A6A72;gap:7px}
+  .legend{padding:7px 14px;gap:15px}
+  .legend .dot{width:10px;height:10px;border-radius:3px}
+  .sheet{box-shadow:0 -12px 40px rgba(17,24,28,.3)}
+  .menu{border-radius:16px} .menu button{font-weight:700}
+  /* thumb-zone action bar */
+  .tabbar{flex:0 0 auto;display:flex;gap:6px;background:linear-gradient(180deg,#141C21,#0B0F12);
+    padding:9px 10px calc(9px + env(safe-area-inset-bottom));position:relative;
+    box-shadow:0 -10px 26px -10px rgba(0,0,0,.55)}
+  .tabbar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+    background:repeating-linear-gradient(45deg,var(--srl) 0 11px,#11181C 11px 22px);opacity:.92}
+  .tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    border:0;background:transparent;color:#9AA7AE;min-height:56px;border-radius:14px;
+    font-family:var(--ui);font-weight:700;font-size:11px;letter-spacing:.4px;transition:transform .07s ease,background .12s}
+  .tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .tab:active{background:rgba(255,255,255,.07);transform:scale(.95)}
+  .tab.tab-draw{color:var(--srl)}
+  body.painting .tabbar{display:none}
+  body.painting .paintbar.open{bottom:calc(10px + env(safe-area-inset-bottom))}
+  /* ---------- v11 tracking / rental / safety ---------- */
+  .flag{display:none;border-radius:12px;padding:9px 12px;font-size:12px;line-height:1.4;margin:6px 0 2px;font-weight:600}
+  .flag.warn{background:#FFF1E8;border:1px solid rgba(242,100,25,.3);color:#9A3B0B}
+  .flag.warn b{color:#C0410A}
+  .flag.ok{background:#EEF6F0;border:1px solid rgba(21,161,80,.22);color:#2E5E43}
+  .flag.ok b{color:#0E7C3C}
+  .check{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;margin-top:14px;cursor:pointer}
+  .check input{width:21px;height:21px;flex:0 0 auto;accent-color:var(--srl)}
+  .grid2{display:flex;gap:10px}
+  .grid2>div{flex:1;min-width:0}
+  .stat.rent{border-left-color:#C0410A} .stat.rent b{color:#FF8A4C}
+  .stat.wip{border-left-color:#2A9DB0} .stat.wip b{color:#2A9DB0}
+  input[type=range]{width:100%;height:34px;accent-color:var(--srl);margin-top:2px}
+  #pct-val{color:var(--srl);font-weight:800}
+  .bay .pctbadge{position:absolute;bottom:1px;right:1px;background:#2A9DB0;color:#fff;font-size:8px;font-weight:800;min-width:14px;height:13px;border-radius:4px;display:flex;align-items:center;justify-content:center;padding:0 2px;line-height:1;z-index:1}
+  body[data-view="field"] .bay .pctbadge{display:none}
+  table.rep .sub{color:var(--srl);font-size:9px;font-weight:700}
+  .bay .rentbadge{position:absolute;top:1px;left:1px;background:#C0410A;color:#fff;font-size:8px;font-weight:800;width:13px;height:13px;border-radius:4px;display:flex;align-items:center;justify-content:center;line-height:1;z-index:1}
+  body[data-view="field"] .bay .rentbadge{width:5px;height:5px;font-size:0;border-radius:2px;top:0;left:0}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body data-view="detail">
+
+  <header>
+    <div class="appbar">
+      <div class="badge">GCS</div>
+      <div class="brand-txt">
+        <div class="title">Scaffold Field Map</div>
+        <input class="project" id="project" placeholder="Project / site name…" autocomplete="off">
+      </div>
+      <div class="status" id="updated">—</div>
+    </div>
+    <div class="stats">
+      <div class="stat built"><b id="s-built">0</b><span>Scaffolds</span></div>
+      <div class="stat srl"><b id="s-srl">0</b><span>SRLs out</span></div>
+      <div class="stat"><b id="s-pct">0%</b><span>Covered</span></div>
+      <div class="stat"><b id="s-sqft">0</b><span>sq ft footprint</span></div>
+      <div class="stat leg"><b id="s-legft">0</b><span>ft of leg</span></div>
+      <div class="stat rent"><b id="s-rent">0</b><span>Rentals 90d+</span></div>
+      <div class="stat wip"><b id="s-wip">0</b><span>Building</span></div>
+    </div>
+  </header>
+
+  <div class="levels" role="group" aria-label="Building level">
+    <button data-lvl="Ground" aria-pressed="true">Ground<span class="ct" id="ct-Ground">0 up</span></button>
+    <button data-lvl="Mezzanine" aria-pressed="false">Mezzanine<span class="ct" id="ct-Mezzanine">0 up</span></button>
+    <button data-lvl="Rooftop" aria-pressed="false">Rooftop<span class="ct" id="ct-Rooftop">0 up</span></button>
+  </div>
+
+  <div class="controls">
+    <div class="seg" role="group" aria-label="Map zoom">
+      <button id="v-detail" aria-pressed="true">Detail</button>
+      <button id="v-field" aria-pressed="false">Field</button>
+    </div>
+    <label class="jump">Go to <input id="jump" type="text" inputmode="text" autocomplete="off" placeholder="C12"></label>
+  </div>
+
+  <div id="scroll"><div id="grid" role="grid" aria-label="Scaffold survey grid"></div></div>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--built)"></i>Up</span>
+    <span><i class="dot" style="background:var(--srl)"></i>SRL</span>
+    <span><i class="dot" style="background:var(--down)"></i>Down</span>
+    <span><i class="dot" style="background:var(--apron);border:1px solid var(--steel)"></i>Outside</span>
+    <span><i class="dot" style="background:#11181C"></i>Column</span>
+  </div>
+
+  <nav class="tabbar" aria-label="Actions">
+    <button class="tab" id="open-search" aria-label="Search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6"/><line x1="15.5" y1="15.5" x2="20" y2="20"/></svg>
+      <span>Search</span>
+    </button>
+    <button class="tab tab-draw" id="open-draw" aria-label="Draw a scaffold">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19l1-4L16 5l3 3L9 18l-4 1z"/><line x1="14" y1="7" x2="17" y2="10"/></svg>
+      <span>Draw</span>
+    </button>
+    <button class="tab" id="open-actions" aria-label="Print and export">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9V4h10v5"/><rect x="4" y="9" width="16" height="8" rx="1.5"/><path d="M7 13h10v7H7z"/></svg>
+      <span>Print</span>
+    </button>
+  </nav>
+
+  <div class="search-panel" id="search-panel">
+    <div class="search-top">
+      <input id="search-input" placeholder="Foreman, tag, SRL serial, or location…" autocomplete="off">
+      <button id="close-search">Done</button>
+    </div>
+    <div id="search-results"></div>
+  </div>
+
+  <div class="menu" id="actions-menu">
+    <button data-act="map">🗺️ Print map — this level</button>
+    <button data-act="report">📄 Print scaffold report — all levels</button>
+    <button data-act="csv">⬇️ Export CSV</button>
+  </div>
+
+  <div class="paintbar" id="paintbar">
+    <div class="pb-row1">
+      <div class="pb-info"><b id="pb-count">0</b> sq · <span id="pb-sqft">0</span> ft²
+        <div class="pb-hint">Drag across the squares — any shape</div></div>
+      <div class="pb-tool" role="group" aria-label="Tool">
+        <button id="tool-paint" class="on">✏️ Paint</button>
+        <button id="tool-move">✋ Move</button>
+      </div>
+    </div>
+    <div class="pb-row2">
+      <button id="pb-clear">Clear</button>
+      <button id="pb-cancel">Cancel</button>
+      <button id="pb-save">Next ▸</button>
+    </div>
+  </div>
+
+  <div class="scrim" id="scrim"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="grab"></div>
+    <h2 id="sheet-title">Bay</h2>
+    <div class="station" id="sheet-station"></div>
+    <div class="flag" id="rental-flag" style="display:none"></div>
+
+    <label>Status</label>
+    <div class="status-seg" id="status-seg">
+      <button data-s="empty">Not built</button>
+      <button data-s="built">Scaffold up</button>
+      <button data-s="down">Taken down</button>
+    </div>
+
+    <label for="pct">% complete <span id="pct-val">100%</span></label>
+    <input type="range" id="pct" min="0" max="100" step="5" value="100">
+    <div class="footnote">Some scaffolds take days to top out — set how far along this one is.</div>
+
+    <label for="foreman">Foreman</label>
+    <input type="text" id="foreman" placeholder="Name" autocomplete="off">
+
+    <label for="tag">Scaffold tag (Hi-Vis #)</label>
+    <input type="text" id="tag" placeholder="Hi-Vis tag #" autocomplete="off">
+
+    <label for="location">Location (span)</label>
+    <input type="text" id="location" placeholder="e.g. A1–A2" autocomplete="off">
+
+    <label for="company">Requesting company</label>
+    <input type="text" id="company" placeholder="Company that requested the scaffold" autocomplete="off">
+    <div class="grid2">
+      <div><label for="request">Request #</label><input type="text" id="request" autocomplete="off"></div>
+      <div><label for="workorder">Work order #</label><input type="text" id="workorder" autocomplete="off"></div>
+    </div>
+
+    <div id="rect-row">
+      <label>Footprint L × W × H (ft) — quick rectangle</label>
+      <div class="dims">
+        <input type="number" id="dimL" placeholder="L" inputmode="decimal">
+        <input type="number" id="dimW" placeholder="W" inputmode="decimal">
+        <input type="number" id="dimH" placeholder="H" inputmode="decimal">
+      </div>
+      <div class="footnote" id="dim-preview">From the tapped corner, running +length / +width.</div>
+      <button class="shapebtn" id="draw-shape">✏️ Draw a custom shape (L, T, U…)</button>
+    </div>
+
+    <div class="shapebox" id="shape-row" style="display:none">
+      <div class="si" id="shape-info">Custom shape</div>
+      <button class="shapebtn" id="edit-shape" style="margin-top:8px">✏️ Edit shape on the map</button>
+      <label style="margin-top:10px">Size (write it out)</label>
+      <input type="text" id="sizeText" placeholder="e.g. 24' × 12' L · 6' wide legs · 8' lifts" autocomplete="off">
+      <label style="margin-top:10px">Height (ft)</label>
+      <input type="number" id="dimH2" placeholder="H" inputmode="decimal">
+    </div>
+
+    <div class="calc" id="calc">
+      <div><b id="calc-sqft">0</b><span>sq ft</span></div>
+      <div><b id="calc-legs">0</b><span>legs</span></div>
+      <div><b id="calc-legft">—</b><span>ft of leg</span></div>
+    </div>
+
+    <label for="legFt">Leg ft (total)</label>
+    <input type="number" id="legFt" inputmode="decimal" placeholder="auto-estimated">
+    <div class="footnote">Auto-estimated from height. Type the real total to override — cantilevers, odd bays, mixed lifts.</div>
+
+    <label class="check"><input type="checkbox" id="cant"> Has a cantilever / outrigger deck</label>
+    <input type="text" id="cantNote" placeholder="Reach &amp; side — e.g. 8 ft cantilever, N face" autocomplete="off" style="display:none">
+
+    <label for="built">Date built</label>
+    <input type="date" id="built">
+
+    <label>Photo</label>
+    <div class="photo-wrap">
+      <label class="shoot" for="photo">📷 Take / choose photo</label>
+      <input type="file" id="photo" accept="image/*" capture="environment">
+      <img id="photo-thumb" alt="" style="display:none">
+    </div>
+
+    <label>SRLs at this bay</label>
+    <div id="srl-list"></div>
+    <button class="addsrl" id="addsrl">+ Add SRL serial</button>
+
+    <label for="notes">Notes / comments</label>
+    <textarea id="notes" placeholder="Anything the crew or boss should know — access, hazards, hold points, size details…"></textarea>
+
+    <div class="sheet-actions">
+      <button class="btn" id="cancel">Cancel</button>
+      <button class="btn save" id="save">Save bay</button>
+    </div>
+  </div>
+
+  <div id="print-area"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* ===== SCAFFOLD FIELD MAP v7 — freeform shapes ===== */
+const SUPABASE_URL = "https://dwytngwhocatzjyfyrnp.supabase.co";   // https://xxxx.supabase.co
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImR3eXRuZ3dob2NhdHpqeWZ5cm5wIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA5NDA3NTcsImV4cCI6MjA5NjUxNjc1N30.a8pGtfAxVD3u094anvfwS1hK_vG-uQASZjmnUNx6k78";   // anon / publishable key
+
+const SPACING=40, STEP=5;
+const BX0=0,BX1=2360,BY0=0,BY1=160;
+const GX0=BX0-SPACING,GX1=BX1+SPACING,GY0=BY0-SPACING,GY1=BY1+SPACING;
+const NX=(GX1-GX0)/STEP+1, NY=(GY1-GY0)/STEP+1;
+const LEVELS=["Ground","Mezzanine","Rooftop"];
+const KEY="scaffold-field-map-v6";   // keep store key stable across versions
+
+let store={}; LEVELS.forEach(l=>store[l]={});
+let level="Ground";
+let lastForeman=localStorage.getItem(KEY+"-foreman")||"";
+let current=null, curStatus="empty", curPhotoData=null, curPhotoBlob=null, lastMeta=null, curCells=null;
+let painting=false, draft=new Set(), paintReturnId=null, lockCell=null, paintTool="paint", stroke=null;
+const map=new Map(), decorated=new Set(), occupancy=new Map();
+
+const useCloud=!!(SUPABASE_URL&&SUPABASE_KEY&&window.supabase);
+const sb=useCloud?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+
+const lvl=()=>store[level];
+const inBldg=(x,y)=>x>=BX0&&x<=BX1&&y>=BY0&&y<=BY1;
+const colOf=x=>({n:Math.floor(x/SPACING)+1, off:x-Math.floor(x/SPACING)*SPACING});
+const rowOf=y=>({L:String.fromCharCode(65+Math.floor(y/SPACING)), off:y-Math.floor(y/SPACING)*SPACING});
+const num=v=>v===""||v==null?null:(+v);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const projectName=()=>localStorage.getItem(KEY+"-project")||"";
+
+/* ---------- footprint: explicit cells OR rectangle from dims ---------- */
+function cellList(id,d){
+  if(d&&d.cells&&d.cells.length)return d.cells.slice();
+  const [x0,y0]=id.split("_").map(Number);
+  const L=num(d&&d.dims&&d.dims.l)||STEP, W=num(d&&d.dims&&d.dims.w)||STEP;
+  const nx=Math.max(1,Math.round(L/STEP)), ny=Math.max(1,Math.round(W/STEP));
+  const out=[];
+  for(let i=0;i<nx;i++)for(let j=0;j<ny;j++)out.push(`${x0+i*STEP}_${y0+j*STEP}`);
+  return out;
+}
+function cellEdges(arr){
+  const set=new Set(arr);
+  return arr.map(cid=>{const [x,y]=cid.split("_").map(Number);
+    return{id:cid,left:!set.has(`${x-STEP}_${y}`),right:!set.has(`${x+STEP}_${y}`),top:!set.has(`${x}_${y-STEP}`),bottom:!set.has(`${x}_${y+STEP}`)};});
+}
+function minCell(arr){return arr.map(id=>{const[a,b]=id.split("_").map(Number);return{id,a,b};}).sort((p,q)=>p.a-q.a||p.b-q.b)[0].id;}
+
+/* ---------- data layer ---------- */
+function rowToBay(r){return{status:r.status,foreman:r.foreman||"",tag:r.tag||"",location:r.location||"",pct:r.pct==null?100:r.pct,
+  dims:{l:r.dim_l??"",w:r.dim_w??"",h:r.dim_h??""},cells:r.cells||null,notes:r.notes||"",sizeText:r.size_text||"",
+  legFt:r.leg_ft??"",cant:!!r.cantilever,cantNote:r.cantilever_note||"",company:r.company||"",request:r.request_no||"",workorder:r.work_order_no||"",
+  built:r.built||"",srls:r.srls||[],photo:r.photo_url||null};}
+async function loadAll(){
+  if(useCloud){
+    const {data,error}=await sb.from("bays").select("*");
+    if(error){console.warn("load:",error.message);loadLocal();}
+    else{LEVELS.forEach(l=>store[l]={});
+      data.forEach(r=>{if(store[r.level])store[r.level][`${r.x}_${r.y}`]=rowToBay(r);});
+      const t=data.reduce((m,r)=>r.updated_at>m?r.updated_at:m,""); lastMeta=t?new Date(t):null;}
+  } else loadLocal();
+  renderAll();
+}
+function loadLocal(){
+  try{const s=JSON.parse(localStorage.getItem(KEY))||{};LEVELS.forEach(l=>store[l]=s[l]||{});}
+  catch{LEVELS.forEach(l=>store[l]={});}
+  const m=localStorage.getItem(KEY+"-meta");lastMeta=m?new Date(m):null;
+}
+function saveLocal(){
+  const clean=JSON.parse(JSON.stringify(store,(k,v)=>k==="_newBlob"?undefined:v));
+  localStorage.setItem(KEY,JSON.stringify(clean));
+  lastMeta=new Date();localStorage.setItem(KEY+"-meta",lastMeta.toISOString());
+}
+async function uploadPhoto(lv,x,y,blob){
+  const path=`${lv}/${x}_${y}-${Date.now()}.jpg`;
+  const {error}=await sb.storage.from("bay-photos").upload(path,blob,{contentType:"image/jpeg",upsert:true});
+  if(error){console.warn("photo:",error.message);return null;}
+  return sb.storage.from("bay-photos").getPublicUrl(path).data.publicUrl;
+}
+async function persistBay(id){
+  const [xs,ys]=id.split("_"), x=+xs, y=+ys, d=store[level][id];
+  if(useCloud){
+    if(!d){ await sb.from("bays").delete().eq("level",level).eq("x",x).eq("y",y); }
+    else{
+      let photo_url=typeof d.photo==="string"&&d.photo.startsWith("http")?d.photo:null;
+      if(d._newBlob)photo_url=await uploadPhoto(level,x,y,d._newBlob);
+      const c=colOf(x), r=rowOf(y);
+      const {error}=await sb.from("bays").upsert({level,x,y,col:c.n,col_off:c.off,row_letter:r.L,row_off:r.off,
+        status:d.status,foreman:d.foreman,tag:d.tag,location:d.location||null,pct:d.pct==null?100:d.pct,
+        dim_l:num(d.dims.l),dim_w:num(d.dims.w),dim_h:num(d.dims.h),
+        cells:d.cells||null,notes:d.notes||null,size_text:d.sizeText||null,
+        leg_ft:num(d.legFt),cantilever:!!d.cant,cantilever_note:d.cantNote||null,
+        company:d.company||null,request_no:d.request||null,work_order_no:d.workorder||null,
+        built:d.built||null,srls:d.srls,photo_url,updated_at:new Date().toISOString()});
+      if(error)console.warn("save:",error.message);
+      d.photo=photo_url; delete d._newBlob;
+    }
+    lastMeta=new Date(); paintMeta();
+  } else { if(d) delete d._newBlob; saveLocal(); }
+}
+function subscribe(){
+  if(!useCloud)return;
+  sb.channel("bays").on("postgres_changes",{event:"*",schema:"public",table:"bays"},p=>{
+    const r=p.eventType==="DELETE"?p.old:p.new; if(!r||!r.level||!store[r.level])return;
+    const id=`${r.x}_${r.y}`;
+    if(p.eventType==="DELETE")delete store[r.level][id]; else store[r.level][id]=rowToBay(r);
+    lastMeta=new Date(); if(!painting)renderAll();
+  }).subscribe();
+}
+
+/* ---------- build grid ---------- */
+const grid=document.getElementById("grid"), scroll=document.getElementById("scroll");
+function buildGrid(){
+  let h='<div class="cell corner"></div>';
+  for(let i=0;i<NX;i++){
+    const x=GX0+i*STEP, inX=x>=BX0&&x<=BX1, line=x%SPACING===0, off=((x%SPACING)+SPACING)%SPACING;
+    let body=line&&inX?`<div class="num">${x/SPACING+1}</div><div class="ft">${x}</div>`
+            :line?`<div class="num" style="font-size:9px">ext</div><div class="ft">${x}</div>`
+            :`<div class="ft">+${off}</div>`;
+    h+=`<div class="cell colhead${line?' line':''}${inX?'':' buffer'}"${line&&inX?` data-col="${x/SPACING+1}"`:''}>${body}</div>`;
+  }
+  for(let j=0;j<NY;j++){
+    const y=GY0+j*STEP, inY=y>=BY0&&y<=BY1, rline=y%SPACING===0, off=((y%SPACING)+SPACING)%SPACING;
+    let rb=rline&&inY?`<div class="num">${String.fromCharCode(65+y/SPACING)}</div><div class="ft">${y}</div>`
+          :rline?`<div class="num" style="font-size:9px">ext</div><div class="ft">${y}</div>`
+          :`<div class="ft">+${off}</div>`;
+    h+=`<div class="cell rowhead${rline?' line':''}${inY?'':' buffer'}">${rb}</div>`;
+    for(let i=0;i<NX;i++){
+      const x=GX0+i*STEP, ib=inBldg(x,y);
+      let base="cell bay";
+      if(!ib)base+=" buffer";
+      if(x%SPACING===0)base+=" vrib"; if(y%SPACING===0)base+=" hrib";
+      if(x===BX0&&y>=BY0&&y<=BY1)base+=" bldg-w";
+      if(x===BX1&&y>=BY0&&y<=BY1)base+=" bldg-e";
+      if(y===BY0&&x>=BX0&&x<=BX1)base+=" bldg-n";
+      if(y===BY1&&x>=BX0&&x<=BX1)base+=" bldg-s";
+      let gtag="";
+      if(ib&&x%SPACING===0&&y%SPACING===0){base+=" colnode";gtag=` data-grid="${String.fromCharCode(65+y/SPACING)}${x/SPACING+1}"`;}
+      h+=`<button class="${base}" data-base="${base}" data-id="${x}_${y}"${gtag} role="gridcell" aria-label="X ${x} Y ${y}"></button>`;
+    }
+  }
+  grid.innerHTML=h;
+  grid.querySelectorAll(".bay").forEach(el=>map.set(el.dataset.id,el));
+  grid.addEventListener("click",e=>{
+    if(painting)return;
+    const b=e.target.closest(".bay"); if(!b)return;
+    openSheet(occupancy.has(b.dataset.id)?occupancy.get(b.dataset.id):b.dataset.id);
+  });
+  grid.addEventListener("pointerdown",e=>{
+    if(!(painting&&paintTool==="paint"))return;
+    const b=e.target.closest(".bay"); if(!b)return;
+    e.preventDefault();
+    stroke={touched:new Set(),add:!draft.has(b.dataset.id)};
+    strokeApply(b.dataset.id);
+  });
+  grid.addEventListener("pointermove",e=>{
+    if(!stroke)return;
+    const t=document.elementFromPoint(e.clientX,e.clientY);
+    const b=t&&t.closest?t.closest(".bay"):null; if(b)strokeApply(b.dataset.id);
+  });
+  renderAll();
+}
+
+/* ---------- render ---------- */
+function paintMeta(){
+  const el=document.getElementById("updated");
+  const when=lastMeta?new Date(lastMeta).toLocaleString([], {month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"no entries yet";
+  el.innerHTML=useCloud?`<span class="live">●</span> Live<br>${when}`:`<span class="local">●</span> Local<br>${when}`;
+}
+function renderAll(){
+  decorated.forEach(el=>{el.className=el.dataset.base;el.style.boxShadow="";el.innerHTML="";});
+  decorated.clear(); occupancy.clear();
+  const data=lvl(); let scaffolds=0, srl=0, legft=0, rentals=0, wip=0; const covered=new Set();
+  for(const id in data){
+    const d=data[id]; if(d.status!=="built"&&d.status!=="down")continue;
+    const isBuilt=d.status==="built", cls=isBuilt?"built":"down", edge=isBuilt?"var(--built-deep)":"var(--down-deep)";
+    cellEdges(cellList(id,d)).forEach(c=>{
+      const el=map.get(c.id); if(!el)return;
+      el.className=el.dataset.base+" "+cls;
+      const sh=[];
+      if(c.left)sh.push(`inset 2px 0 0 ${edge}`); if(c.right)sh.push(`inset -2px 0 0 ${edge}`);
+      if(c.top)sh.push(`inset 0 2px 0 ${edge}`); if(c.bottom)sh.push(`inset 0 -2px 0 ${edge}`);
+      if(sh.length)el.style.boxShadow=sh.join(",");
+      occupancy.set(c.id,id); decorated.add(el);
+      if(isBuilt)covered.add(c.id);
+    });
+    if(isBuilt){
+      scaffolds++; legft+=effLeg(id,d); const rent=isRental(d); if(rent)rentals++;
+      const pc=d.pct==null?100:d.pct; if(pc<100)wip++; const aEl=map.get(id);
+      if(aEl){
+        if(d.srls&&d.srls.length){srl+=d.srls.length;const b=document.createElement("span");b.className="srlbadge";b.textContent=d.srls.length;aEl.appendChild(b);}
+        if(d.photo){const p=document.createElement("span");p.className="pho";aEl.appendChild(p);}
+        if(rent){const rb=document.createElement("span");rb.className="rentbadge";rb.textContent="R";aEl.appendChild(rb);}
+        if(pc<100){const pb=document.createElement("span");pb.className="pctbadge";pb.textContent=pc;aEl.appendChild(pb);}
+      }
+    }
+  }
+  document.getElementById("s-built").textContent=scaffolds;
+  document.getElementById("s-srl").textContent=srl;
+  document.getElementById("s-pct").textContent=Math.round(covered.size/(NX*NY)*100)+"%";
+  document.getElementById("s-sqft").textContent=(covered.size*STEP*STEP).toLocaleString();
+  document.getElementById("s-legft").textContent=legft.toLocaleString();
+  document.getElementById("s-rent").textContent=rentals;
+  document.getElementById("s-wip").textContent=wip;
+  LEVELS.forEach(l=>{document.getElementById("ct-"+l).textContent=Object.values(store[l]).filter(v=>v.status==="built").length+" up";});
+  paintMeta();
+}
+
+/* ---------- bay sheet ---------- */
+const sheet=document.getElementById("sheet"), scrim=document.getElementById("scrim");
+function locLabel(x,y){
+  if(inBldg(x,y)){const c=colOf(x),r=rowOf(y);
+    return{title:`${r.L}-${c.n}`, line:`Col ${c.n}${c.off?` +${c.off} ft`:""} · Row ${r.L}${r.off?` +${r.off} ft`:""}`};}
+  const s=[]; if(y<BY0)s.push("N"); if(y>BY1)s.push("S"); if(x<BX0)s.push("W"); if(x>BX1)s.push("E");
+  return{title:`Apron ${s.join("/")}`, line:`OUTSIDE building · ${s.join("/")} apron`};
+}
+function previewDims(){
+  const L=num(document.getElementById("dimL").value)||STEP, W=num(document.getElementById("dimW").value)||STEP;
+  const nx=Math.max(1,Math.round(L/STEP)), ny=Math.max(1,Math.round(W/STEP));
+  document.getElementById("dim-preview").textContent=`Shades ${nx}×${ny} = ${nx*ny} squares (${nx*ny*25} sq ft) from the tapped corner.`;
+  updateCalc();
+}
+["dimL","dimW"].forEach(idd=>document.getElementById(idd).addEventListener("input",previewDims));
+/* ---- leg footage estimate (posts at every 5 ft node × height) ---- */
+function legsFromCells(cells,h){
+  const nodes=new Set();
+  cells.forEach(cid=>{const[cx,cy]=cid.split("_").map(Number);
+    nodes.add(`${cx}_${cy}`);nodes.add(`${cx+STEP}_${cy}`);nodes.add(`${cx}_${cy+STEP}`);nodes.add(`${cx+STEP}_${cy+STEP}`);});
+  const posts=nodes.size, ht=num(h)||0;
+  return {posts, ft:posts*ht};
+}
+function daysStanding(d){if(!d||!d.built)return null;const t=Date.parse(d.built+"T00:00:00");if(isNaN(t))return null;return Math.floor((Date.now()-t)/86400000);}
+function isRental(d){return !!d&&d.status==="built"&&(daysStanding(d)||0)>90;}
+function effLeg(id,d){const m=(d.legFt!==""&&d.legFt!=null)?num(d.legFt):null;return m!=null?m:legsFromCells(cellList(id,d),d.dims?.h).ft;}
+function curFootprintCells(){
+  if(curCells&&curCells.length)return curCells;
+  const L=num(document.getElementById("dimL").value), W=num(document.getElementById("dimW").value);
+  if(!L||!W)return [];
+  return cellList(current,{dims:{l:L,w:W},cells:null});
+}
+function updateCalc(){
+  const cells=curFootprintCells();
+  const h=num(document.getElementById(curCells?"dimH2":"dimH").value);
+  const le=legsFromCells(cells,h);
+  const lf=document.getElementById("legFt");
+  const manual=lf.value!==""?num(lf.value):null;
+  const eff=manual!=null?manual:le.ft;
+  document.getElementById("calc-sqft").textContent=(cells.length*STEP*STEP).toLocaleString();
+  document.getElementById("calc-legs").textContent=le.posts;
+  document.getElementById("calc-legft").textContent=eff?Number(eff).toLocaleString():"—";
+  lf.placeholder=le.ft?`auto ≈ ${le.ft.toLocaleString()}`:"enter height first";
+}
+function updateFlags(){
+  const built=document.getElementById("built").value;
+  const days=built?Math.floor((Date.now()-Date.parse(built+"T00:00:00"))/86400000):null;
+  const rental=curStatus==="built"&&days!=null&&days>90;
+  const rf=document.getElementById("rental-flag");
+  if(rental){rf.className="flag warn";rf.style.display="block";
+    rf.innerHTML=`⚠ Standing <b>${days} days</b> — counts as a RENTAL (over 90 days). Confirm with the office.`;}
+  else if(curStatus==="built"&&days!=null){rf.className="flag ok";rf.style.display="block";
+    const left=90-days;rf.innerHTML=`Up <b>${days} day${days===1?"":"s"}</b> · ${left} day${left===1?"":"s"} until it counts as a rental.`;}
+  else rf.style.display="none";
+}
+["dimH","dimH2","legFt"].forEach(idd=>document.getElementById(idd).addEventListener("input",updateCalc));
+document.getElementById("built").addEventListener("input",updateFlags);
+document.getElementById("pct").addEventListener("input",e=>{document.getElementById("pct-val").textContent=e.target.value+"%";});
+document.getElementById("cant").addEventListener("change",()=>{
+  document.getElementById("cantNote").style.display=document.getElementById("cant").checked?"block":"none";
+});
+function openSheet(id, shapeCells){
+  current=id; curPhotoBlob=null;
+  const [xs,ys]=id.split("_"), x=+xs, y=+ys, lab=locLabel(x,y);
+  const d=lvl()[id]||{status:"empty",foreman:lastForeman,tag:"",dims:{},cells:null,built:today(),srls:[],photo:null};
+  curCells = shapeCells ? shapeCells.slice() : (d.cells&&d.cells.length? d.cells.slice():null);
+  curPhotoData=d.photo||null;
+  document.getElementById("sheet-title").textContent=`${level} · ${lab.title}`;
+  document.getElementById("sheet-station").innerHTML=`${lab.line}<br>X ${x.toLocaleString()} ft · Y ${y} ft`;
+  setStatus(d.status||"empty");
+  document.getElementById("foreman").value=d.foreman||lastForeman;
+  document.getElementById("tag").value=d.tag||"";
+  document.getElementById("dimL").value=d.dims?.l||"";
+  document.getElementById("dimW").value=d.dims?.w||"";
+  document.getElementById("dimH").value=d.dims?.h||"";
+  document.getElementById("dimH2").value=d.dims?.h||"";
+  document.getElementById("notes").value=d.notes||"";
+  document.getElementById("sizeText").value=d.sizeText||"";
+  document.getElementById("built").value=d.built||today();
+  document.getElementById("legFt").value=d.legFt||"";
+  document.getElementById("location").value=d.location||"";
+  const pv=d.pct==null?100:d.pct;
+  document.getElementById("pct").value=pv;
+  document.getElementById("pct-val").textContent=pv+"%";
+  document.getElementById("company").value=d.company||"";
+  document.getElementById("request").value=d.request||"";
+  document.getElementById("workorder").value=d.workorder||"";
+  document.getElementById("cant").checked=!!d.cant;
+  document.getElementById("cantNote").value=d.cantNote||"";
+  document.getElementById("cantNote").style.display=d.cant?"block":"none";
+  previewDims();
+  /* shape vs rectangle UI */
+  const rect=document.getElementById("rect-row"), shp=document.getElementById("shape-row");
+  if(curCells){ rect.style.display="none"; shp.style.display="block";
+    document.getElementById("shape-info").textContent=`Custom shape · ${curCells.length} squares · ${(curCells.length*25).toLocaleString()} sq ft`; }
+  else { rect.style.display="block"; shp.style.display="none"; }
+  const t=document.getElementById("photo-thumb");
+  if(curPhotoData){t.src=curPhotoData;t.style.display="block";}else{t.style.display="none";t.src="";}
+  renderSrls(d.srls||[]);
+  updateFlags();
+  scrim.classList.add("open"); sheet.classList.add("open");
+}
+function closeSheet(){scrim.classList.remove("open");sheet.classList.remove("open");current=null;}
+function setStatus(s){curStatus=s;document.querySelectorAll("#status-seg button").forEach(b=>b.classList.toggle("on",b.dataset.s===s));updateFlags();}
+document.querySelectorAll("#status-seg button").forEach(b=>b.onclick=()=>setStatus(b.dataset.s));
+
+document.getElementById("photo").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const img=new Image();
+  img.onload=()=>{
+    const mx=800, sc=Math.min(1,mx/Math.max(img.width,img.height));
+    const cv=document.createElement("canvas"); cv.width=img.width*sc; cv.height=img.height*sc;
+    cv.getContext("2d").drawImage(img,0,0,cv.width,cv.height);
+    curPhotoData=cv.toDataURL("image/jpeg",0.6);
+    cv.toBlob(b=>{curPhotoBlob=b;},"image/jpeg",0.6);
+    const t=document.getElementById("photo-thumb");t.src=curPhotoData;t.style.display="block";
+    URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(f);
+});
+function renderSrls(list){
+  const wrap=document.getElementById("srl-list"); wrap.innerHTML="";
+  list.forEach((s,i)=>{
+    const row=document.createElement("div");row.className="srl-row";
+    const inp=document.createElement("input");inp.type="text";inp.value=s;inp.placeholder="SRL serial #";
+    const del=document.createElement("button");del.textContent="×";del.onclick=()=>{const l=collectSrls();l.splice(i,1);renderSrls(l);};
+    row.appendChild(inp);row.appendChild(del);wrap.appendChild(row);
+  });
+}
+function collectSrls(){return [...document.querySelectorAll("#srl-list input")].map(i=>i.value.trim());}
+document.getElementById("addsrl").onclick=()=>renderSrls([...collectSrls(),""]);
+
+document.getElementById("save").onclick=async ()=>{
+  if(!current)return;
+  const id=current, foreman=document.getElementById("foreman").value.trim();
+  if(curStatus==="empty"){ delete lvl()[id]; }
+  else{
+    const h=curCells?document.getElementById("dimH2").value:document.getElementById("dimH").value;
+    lvl()[id]={status:curStatus,foreman,
+      tag:document.getElementById("tag").value.trim(),
+      location:document.getElementById("location").value.trim(),
+      pct:+document.getElementById("pct").value,
+      dims:{l:document.getElementById("dimL").value,w:document.getElementById("dimW").value,h},
+      cells:curCells&&curCells.length?curCells.slice():null,
+      notes:document.getElementById("notes").value.trim(),
+      sizeText:document.getElementById("sizeText").value.trim(),
+      legFt:document.getElementById("legFt").value.trim(),
+      cant:document.getElementById("cant").checked,
+      cantNote:document.getElementById("cantNote").value.trim(),
+      company:document.getElementById("company").value.trim(),
+      request:document.getElementById("request").value.trim(),
+      workorder:document.getElementById("workorder").value.trim(),
+      built:document.getElementById("built").value||today(),
+      srls:collectSrls().filter(Boolean), photo:curPhotoData||null, _newBlob:curPhotoBlob||null};
+  }
+  if(foreman){lastForeman=foreman;localStorage.setItem(KEY+"-foreman",foreman);}
+  renderAll(); closeSheet();
+  try{ await persistBay(id); renderAll(); }
+  catch(err){ console.warn(err); alert("Couldn't reach the cloud — saved on this device. Re-save when back online."); saveLocal(); }
+};
+document.getElementById("cancel").onclick=closeSheet;
+scrim.onclick=closeSheet;
+
+/* ---------- shape painting ---------- */
+const paintbar=document.getElementById("paintbar");
+function updatePaintBar(){document.getElementById("pb-count").textContent=draft.size;document.getElementById("pb-sqft").textContent=(draft.size*25).toLocaleString();}
+function toggleDraft(id){
+  if(id===lockCell)return;
+  const el=map.get(id); if(!el)return;
+  if(draft.has(id)){draft.delete(id);el.classList.remove("draft");}
+  else{draft.add(id);el.classList.add("draft");}
+  updatePaintBar();
+}
+function startPaint(seed,returnId,lock){
+  painting=true; paintReturnId=returnId||null; lockCell=lock||null;
+  draft=new Set(seed||[]);
+  document.body.classList.add("painting");
+  setTool("paint");
+  closeSheet();
+  draft.forEach(id=>{const el=map.get(id);if(el)el.classList.add("draft");});
+  if(lockCell){const el=map.get(lockCell);if(el)el.classList.add("lockcell");}
+  paintbar.classList.add("open"); updatePaintBar();
+}
+function exitPaint(){
+  painting=false; stroke=null;
+  document.body.classList.remove("painting","tool-paint","tool-move");
+  draft.forEach(id=>{const el=map.get(id);if(el){el.classList.remove("draft");el.classList.remove("lockcell");}});
+  if(lockCell){const el=map.get(lockCell);if(el)el.classList.remove("lockcell");}
+  draft=new Set(); lockCell=null; paintReturnId=null;
+  paintbar.classList.remove("open"); renderAll();
+}
+document.getElementById("open-draw").onclick=()=>{ closeSearch(); startPaint([],null,null); };
+document.getElementById("draw-shape").onclick=()=>{
+  const id=current, exists=!!lvl()[id];
+  const tmp={dims:{l:document.getElementById("dimL").value,w:document.getElementById("dimW").value},cells:curCells};
+  startPaint(cellList(id,tmp), exists?id:null, exists?id:null);
+};
+document.getElementById("edit-shape").onclick=()=>{ startPaint(curCells||[current],current,current); };
+document.getElementById("pb-clear").onclick=()=>{
+  draft.forEach(id=>{if(id===lockCell)return;const el=map.get(id);if(el)el.classList.remove("draft");});
+  draft=new Set(lockCell?[lockCell]:[]); updatePaintBar();
+};
+document.getElementById("pb-cancel").onclick=exitPaint;
+document.getElementById("pb-save").onclick=()=>{
+  const arr=[...draft];
+  if(!arr.length){alert("Drag across the squares the scaffold covers first.");return;}
+  const anchor=paintReturnId||minCell(arr);
+  const wasNew=!lvl()[anchor];
+  exitPaint();
+  openSheet(anchor,arr);
+  if(wasNew)setStatus("built");
+};
+function setTool(t){paintTool=t;
+  document.body.classList.toggle("tool-paint",t==="paint");
+  document.body.classList.toggle("tool-move",t==="move");
+  const p=document.getElementById("tool-paint"),m=document.getElementById("tool-move");
+  if(p)p.classList.toggle("on",t==="paint"); if(m)m.classList.toggle("on",t==="move");}
+function strokeApply(id){
+  if(!stroke||id===lockCell||stroke.touched.has(id))return;
+  stroke.touched.add(id);
+  const el=map.get(id); if(!el)return;
+  if(stroke.add){if(!draft.has(id)){draft.add(id);el.classList.add("draft");}}
+  else{if(draft.has(id)){draft.delete(id);el.classList.remove("draft");}}
+  updatePaintBar();
+}
+window.addEventListener("pointerup",()=>{stroke=null;});
+window.addEventListener("pointercancel",()=>{stroke=null;});
+document.getElementById("tool-paint").onclick=()=>setTool("paint");
+document.getElementById("tool-move").onclick=()=>setTool("move");
+
+/* ---------- project name ---------- */
+const projEl=document.getElementById("project");
+projEl.value=projectName();
+projEl.addEventListener("input",()=>localStorage.setItem(KEY+"-project",projEl.value));
+
+/* ---------- levels / view / jump ---------- */
+function setLevel(l){level=l;document.querySelectorAll(".levels button").forEach(x=>x.setAttribute("aria-pressed",x.dataset.lvl===l));renderAll();}
+document.querySelectorAll(".levels button").forEach(b=>b.onclick=()=>setLevel(b.dataset.lvl));
+const vd=document.getElementById("v-detail"), vf=document.getElementById("v-field");
+vd.onclick=()=>setView("detail"); vf.onclick=()=>setView("field");
+function setView(v){document.body.dataset.view=v;vd.setAttribute("aria-pressed",v==="detail");vf.setAttribute("aria-pressed",v==="field");}
+document.getElementById("jump").addEventListener("change",e=>{
+  const v=(e.target.value||"").trim().toUpperCase(); if(!v)return;
+  const lm=v.match(/[A-E]/), nm=v.match(/\d+/);
+  const letter=lm?lm[0]:null, colN=nm?Math.min(60,Math.max(1,+nm[0])):null;
+  if(letter&&colN){
+    const x=(colN-1)*SPACING, y=(letter.charCodeAt(0)-65)*SPACING, el=map.get(`${x}_${y}`);
+    if(el){setView("detail");scroll.scrollTo({left:Math.max(0,el.offsetLeft-130),top:Math.max(0,el.offsetTop-130),behavior:"smooth"});
+      el.classList.add("hit");setTimeout(()=>el.classList.remove("hit"),1600);}
+  }else if(colN){
+    const cell=document.querySelector(`.colhead[data-col="${colN}"]`);
+    if(cell)scroll.scrollTo({left:cell.offsetLeft-46,behavior:"smooth"});
+  }else if(letter){
+    const y=(letter.charCodeAt(0)-65)*SPACING, el=map.get(`0_${y}`);
+    if(el)scroll.scrollTo({top:Math.max(0,el.offsetTop-130),behavior:"smooth"});
+  }
+});
+function today(){return new Date().toISOString().slice(0,10);}
+
+/* ---------- search ---------- */
+const sp=document.getElementById("search-panel"), si=document.getElementById("search-input"), sr=document.getElementById("search-results");
+function openSearch(){sp.classList.add("open");si.value="";runSearch();setTimeout(()=>si.focus(),120);}
+function closeSearch(){sp.classList.remove("open");}
+document.getElementById("open-search").onclick=openSearch;
+document.getElementById("close-search").onclick=closeSearch;
+si.addEventListener("input",runSearch);
+function runSearch(){
+  const q=si.value.trim().toLowerCase(); const out=[];
+  LEVELS.forEach(l=>Object.entries(store[l]).forEach(([id,d])=>{
+    if(d.status!=="built"&&d.status!=="down")return;
+    const [xs,ys]=id.split("_"),x=+xs,y=+ys,lab=locLabel(x,y);
+    const hay=[l,lab.title,lab.line,d.foreman,d.tag,d.location,d.notes,d.sizeText,d.company,d.request,d.workorder,(d.srls||[]).join(" "),d.status,isRental(d)?"rental":"",d.cant?"cantilever":""].join(" ").toLowerCase();
+    if(q&&!hay.includes(q))return;
+    out.push({l,id,x,y,lab,d});
+  }));
+  out.sort((a,b)=>a.l.localeCompare(b.l)||a.x-b.x||a.y-b.y);
+  if(!out.length){sr.innerHTML=`<div class="res-empty">${q?"No matches.":"Type to search — or browse all built scaffolds."}</div>`;return;}
+  sr.innerHTML=out.slice(0,80).map(o=>{
+    const c=o.d.status==="built"?"var(--built)":"var(--down)";
+    const meta=[o.d.foreman,o.d.tag,(o.d.srls&&o.d.srls.length?`${o.d.srls.length} SRL`:""),(o.d.cells?"shape":"")].filter(Boolean).join(" · ");
+    return `<div class="res" data-l="${o.l}" data-id="${o.id}"><span class="pin" style="background:${c}"></span>
+      <div class="main"><div class="l1">${esc(o.lab.title)}</div><div class="l2">${esc(meta||o.lab.line)}</div></div>
+      <span class="lvl">${o.l[0]}</span></div>`;
+  }).join("");
+  sr.querySelectorAll(".res").forEach(el=>el.onclick=()=>goTo(el.dataset.id,el.dataset.l));
+}
+function goTo(id,l){
+  closeSearch();
+  if(l&&l!==level)setLevel(l);
+  setView("detail");
+  const el=map.get(id);
+  if(el){scroll.scrollTo({left:Math.max(0,el.offsetLeft-130),top:Math.max(0,el.offsetTop-130),behavior:"smooth"});
+    el.classList.add("hit"); setTimeout(()=>el.classList.remove("hit"),1600);}
+  setTimeout(()=>openSheet(id),350);
+}
+
+/* ---------- actions / print / csv ---------- */
+const menu=document.getElementById("actions-menu");
+document.getElementById("open-actions").onclick=e=>{e.stopPropagation();menu.classList.toggle("open");};
+document.addEventListener("click",e=>{if(!menu.contains(e.target)&&e.target.id!=="open-actions")menu.classList.remove("open");});
+menu.querySelectorAll("button").forEach(b=>b.onclick=()=>{menu.classList.remove("open");const a=b.dataset.act;if(a==="csv")exportCSV();else printDoc(a);});
+
+function exportCSV(){
+  const rows=[["Project","Level","Cell","Location","Inside","Col","Col_off_ft","Row","Row_off_ft","X_ft","Y_ft","Status","Pct_complete","Shape","Foreman","Tag_HiVis","Size_text","L_ft","W_ft","H_ft","Footprint_sqft","Legs","Leg_ft","Requesting_company","Request_no","Work_order_no","Cantilever","Cantilever_note","Days_standing","Rental","Date","SRL_count","SRL_serials","Notes","Photo_url"]];
+  LEVELS.forEach(l=>Object.entries(store[l]).sort().forEach(([id,d])=>{
+    const [xs,ys]=id.split("_"),x=+xs,y=+ys,c=colOf(x),r=rowOf(y),ib=inBldg(x,y);
+    const area=cellList(id,d).length*STEP*STEP;
+    const le=legsFromCells(cellList(id,d),d.dims?.h), days=daysStanding(d);
+    rows.push([projectName(),l,`${r.L}-${c.n}`,d.location||"",ib?"in":"apron",c.n,c.off,r.L,r.off,x,y,d.status,d.pct==null?100:d.pct,d.cells?"custom":"rect",d.foreman||"",d.tag||"",d.sizeText||"",d.dims?.l||"",d.dims?.w||"",d.dims?.h||"",area,le.posts,effLeg(id,d),d.company||"",d.request||"",d.workorder||"",d.cant?"yes":"",d.cantNote||"",days==null?"":days,isRental(d)?"RENTAL":"",d.built||"",(d.srls||[]).length,(d.srls||[]).join(" | "),d.notes||"",typeof d.photo==="string"&&d.photo.startsWith("http")?d.photo:""]);
+  }));
+  const csv=rows.map(r=>r.map(x=>`"${String(x).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=`scaffold-${today()}.csv`;a.click();
+}
+
+const pa=document.getElementById("print-area");
+function setOrient(o){let st=document.getElementById("orient");if(!st){st=document.createElement("style");st.id="orient";document.head.appendChild(st);}st.textContent=`@media print{@page{size:${o};margin:12mm}}`;}
+function headBlock(sub){return `<div class="print-head"><div class="pbadge">GCS</div>
+  <div><h1>Scaffold Field Map</h1><div class="meta">${esc(projectName()||"—")} · ${sub}</div></div>
+  <div class="right">Generated<br>${new Date().toLocaleString()}</div></div>`;}
+function dimStr(d){if(d.cells)return d.sizeText||"custom shape";const a=[d.dims?.l,d.dims?.w,d.dims?.h].map(v=>v===""||v==null?"–":v);return a.join(" × ");}
+function totals(){let s=0,sr=0,sq=0,lf=0,rent=0;LEVELS.forEach(l=>Object.entries(store[l]).forEach(([id,d])=>{if(d.status==="built"){s++;sr+=(d.srls||[]).length;sq+=cellList(id,d).length*25;lf+=effLeg(id,d);if(isRental(d))rent++;}}));return{s,sr,sq,lf,rent};}
+function printReport(){
+  const t=totals();
+  let body=`<div class="psum"><div><b>${t.s}</b><span>Scaffolds up</span></div>
+    <div><b style="color:#F26419">${t.sr}</b><span>SRLs deployed</span></div>
+    <div><b>${t.sq.toLocaleString()}</b><span>sq ft footprint</span></div>
+    <div><b style="color:#2A9DB0">${t.lf.toLocaleString()}</b><span>ft of leg</span></div>
+    <div><b style="color:#C0410A">${t.rent}</b><span>rentals 90d+</span></div></div>`;
+  LEVELS.forEach(l=>{
+    const ent=Object.entries(store[l]).filter(([_,d])=>d.status==="built"||d.status==="down").sort();
+    if(!ent.length)return;
+    let ls=0,lsr=0,lsq=0,llf=0,lrent=0,rows="";
+    ent.forEach(([id,d])=>{
+      const [xs,ys]=id.split("_"),x=+xs,y=+ys,lab=locLabel(x,y),area=cellList(id,d).length*25;
+      const le=legsFromCells(cellList(id,d),d.dims?.h), lf=effLeg(id,d), days=daysStanding(d), rent=isRental(d);
+      const pc=d.pct==null?100:d.pct;
+      if(d.status==="built"){ls++;lsr+=(d.srls||[]).length;lsq+=area;llf+=lf;if(rent)lrent++;}
+      rows+=`<tr class="${d.status}${rent?" rental":""}"><td>${esc(lab.title)}${d.location?`<br><span class="sub">${esc(d.location)}</span>`:""}</td><td>${inBldg(x,y)?"In":"Apron"}</td>
+        <td>${rent?"RENTAL":(d.status==="built"?"Up":"Down")}</td><td class="c">${d.status==="built"?pc+"%":"–"}</td><td>${esc(d.foreman)}</td><td>${esc(d.company||"")}</td>
+        <td>${esc(d.tag)}${d.cant?' <b class="cflag">⌐CANT</b>':""}</td><td>${esc(d.workorder||"")}</td>
+        <td>${esc(dimStr(d))}</td><td class="r">${area.toLocaleString()}</td>
+        <td class="c">${le.posts}</td><td class="r">${lf?lf.toLocaleString():"–"}</td>
+        <td class="c">${(d.srls||[]).length}</td><td class="srl">${esc((d.srls||[]).join(", "))}</td>
+        <td>${esc(d.built)}</td><td class="c">${days==null?"–":days}</td><td>${esc(d.notes||"")}</td><td class="c">${d.photo?"✓":""}</td></tr>`;
+    });
+    body+=`<h3>${l}<span class="lvlsum">${ls} up · ${lrent} rental · ${lsr} SRLs · ${lsq.toLocaleString()} sq ft · ${llf.toLocaleString()} ft leg</span></h3>
+      <table class="rep"><thead><tr><th>Loc</th><th>Zone</th><th>Status</th><th>%</th><th>Foreman</th><th>Requesting co.</th><th>Tag</th><th>WO#</th><th>Size</th><th>Sq ft</th><th>Legs</th><th>Leg ft</th><th>SRL</th><th>SRL serials</th><th>Built</th><th>Days</th><th>Notes</th><th>Pic</th></tr></thead><tbody>${rows}</tbody></table>`;
+  });
+  pa.innerHTML=`<div class="print-doc">${headBlock("Scaffold report — all levels")}${body}
+    <div class="pfoot">GCS Buildings · Scaffold Field Map · Fall-protection &amp; scaffold inventory</div></div>`;
+  setOrient("landscape"); window.print();
+}
+function mapBand(c0,c1){
+  const xS=(c0-1)*SPACING, xE=(c1-1)*SPACING;
+  const padW=(c0===1?SPACING:14), padE=(c1>=60?SPACING:14);
+  const x0=xS-padW, x1=xE+padE, M=6;
+  const vx=x0-M, vy=GY0-M, vw=(x1-x0)+2*M, vh=(GY1-GY0)+2*M, pid="h"+c0;
+  let g=`<svg class="pmap" viewBox="${vx} ${vy} ${vw} ${vh}" preserveAspectRatio="xMidYMid meet">`;
+  g+=`<defs><pattern id="${pid}" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="9" height="9" fill="#D3DDE2"/><line x1="0" y1="0" x2="0" y2="9" stroke="#A4B2BA" stroke-width="1.6"/></pattern></defs>`;
+  g+=`<rect x="${vx}" y="${vy}" width="${vw}" height="${vh}" fill="url(#${pid})"/>`;
+  g+=`<rect x="${BX0}" y="${BY0}" width="${BX1-BX0}" height="${BY1-BY0}" fill="#fff" stroke="#11181C" stroke-width="3.5"/>`;
+  for(let cx=xS;cx<=xE;cx+=SPACING){ if(cx<BX0||cx>BX1)continue;
+    g+=`<line x1="${cx}" y1="${BY0}" x2="${cx}" y2="${BY1}" stroke="#C4CDD2" stroke-width="0.7"/>`;
+    g+=`<text x="${cx}" y="${BY0-9}" font-size="15" text-anchor="middle" font-weight="bold" fill="#11181C" font-family="monospace" paint-order="stroke" stroke="#fff" stroke-width="3">${cx/SPACING+1}</text>`;
+  }
+  for(let cy=BY0;cy<=BY1;cy+=SPACING){
+    g+=`<line x1="${BX0}" y1="${cy}" x2="${BX1}" y2="${cy}" stroke="#C4CDD2" stroke-width="0.7"/>`;
+    g+=`<text x="${x0+3}" y="${cy+5}" font-size="15" text-anchor="start" font-weight="bold" fill="#11181C" font-family="monospace" paint-order="stroke" stroke="#fff" stroke-width="3">${String.fromCharCode(65+cy/SPACING)}</text>`;
+  }
+  for(let cx=xS;cx<=xE;cx+=SPACING){ if(cx<BX0||cx>BX1)continue;
+    for(let cy=BY0;cy<=BY1;cy+=SPACING)g+=`<rect x="${cx-2.5}" y="${cy-2.5}" width="5" height="5" fill="#11181C"/>`;
+  }
+  const data=store[level];
+  for(const id in data){ const d=data[id]; if(d.status!=="built"&&d.status!=="down")continue;
+    const cells=cellList(id,d);
+    if(!cells.some(cid=>{const cx=+cid.split("_")[0];return cx>=x0-STEP&&cx<=x1;}))continue;
+    const fill=d.status==="built"?"#15A150":"#8A99A3", stroke=d.status==="built"?"#0E7C3C":"#5E6A70";
+    cells.forEach(cid=>{const[cx,cy]=cid.split("_").map(Number);g+=`<rect x="${cx}" y="${cy}" width="${STEP}" height="${STEP}" fill="${fill}" fill-opacity="0.95" stroke="${stroke}" stroke-width="0.5"/>`;});
+    const [ax,ay]=id.split("_").map(Number);
+    const lab=[d.tag,d.location].filter(Boolean).join(" · ");
+    if(lab)g+=`<text x="${ax+1}" y="${ay-2.5}" font-size="8.5" fill="#0B5A2C" font-family="monospace" paint-order="stroke" stroke="#fff" stroke-width="2">${esc(lab)}</text>`;
+  }
+  g+=`</svg>`;
+  return g;
+}
+function printMap(){
+  const PER=10, pageCount=Math.ceil(60/PER);
+  const built=Object.entries(store[level]).filter(([_,d])=>d.status==="built");
+  const sq=built.reduce((m,[id])=>m+cellList(id,store[level][id]).length*25,0);
+  const sr=built.reduce((m,[,d])=>m+(d.srls?d.srls.length:0),0);
+  const stamp=today();
+  let pages="";
+  for(let c0=1;c0<=60;c0+=PER){
+    const c1=Math.min(60,c0+PER-1);
+    pages+=`<div class="mappage">
+      <div class="mphead"><b>${esc(projectName()||"GCS Buildings")}</b>
+        <span class="mpcols">${level} · Columns ${c0}–${c1}</span>
+        <span class="mpmeta">${stamp}</span></div>
+      ${mapBand(c0,c1)}
+      <div class="plegend">
+        <span><i style="background:#15A150"></i>Scaffold up</span>
+        <span><i style="background:#8A99A3"></i>Taken down</span>
+        <span><i style="background:#fff;border:1px solid #11181C"></i>Building</span>
+        <span><i style="background:#D3DDE2;border:1px solid #A4B2BA"></i>40 ft apron (outside)</span>
+        <span style="margin-left:auto">${built.length} up · ${sr} SRLs · ${sq.toLocaleString()} sq ft</span>
+      </div>
+    </div>`;
+  }
+  pa.innerHTML=`<div class="print-doc">${pages}<div class="pfoot">GCS Buildings · Scaffold Field Map · ${esc(projectName()||"")} · ${level} level · ${pageCount} pages @ ${PER} cols/page</div></div>`;
+  setOrient("landscape"); window.print();
+}
+function printDoc(type){ type==="map"?printMap():printReport(); }
+
+/* ---------- boot ---------- */
+buildGrid();
+loadAll();
+subscribe();
+</script>
+</body>
+</html>
